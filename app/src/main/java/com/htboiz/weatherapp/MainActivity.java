@@ -15,6 +15,8 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -41,12 +43,14 @@ public class MainActivity extends AppCompatActivity {
 
                 String url = getUrl(location);
 
-                try {
-                    String json = fetch(url);
-                    displayWeather(json);
-                } catch (IOException ex) {
-                    Log.e(TAG, "fetch failed " + ex);
-                }
+                fetchAsync(url);
+
+                // NetworkOnMainException
+//                try {
+//                    String json = fetch(url);
+//                } catch (IOException ex) {
+//
+//                }
 
 
             }
@@ -54,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void displayWeather(String json) {
+        Log.v(TAG, "displayWeather " + json);
         if (json != null) {
             WeatherResponse weather = getGson().fromJson(json, new TypeToken<WeatherResponse>() {
             }.getType());
@@ -68,17 +73,43 @@ public class MainActivity extends AppCompatActivity {
         return url;
     }
 
-    String fetch(String url) throws IOException {
+    void fetchAsync(String url) {
+
         OkHttpClient client = new OkHttpClient();
 
         Request request = new Request.Builder()
                 .url(url)
                 .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "fetch failed " + e);
+            }
 
-        try (Response response = client.newCall(request).execute()) {
-            return response.body().string();
-        }
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+
+                    String json = response.body().string();
+                    displayWeather(json);
+                } else {
+                    Log.e(TAG, "fetch failed " + response.code());
+                }
+            }
+        });
+
     }
+
+
+//    String fetch(String url) throws IOException {
+//        OkHttpClient client = new OkHttpClient();
+//        Request request = new Request.Builder()
+//                .url(url)
+//                .build();
+//        try (Response response = client.newCall(request).execute()) {
+//            return response.body().string();
+//        }
+//    }
 
     Gson getGson() {
         return new GsonBuilder().setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
